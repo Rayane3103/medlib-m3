@@ -16,12 +16,21 @@ import { readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 
 const root = resolve(import.meta.dirname, "..");
-// Returns captured stdout, or "" when the caller inherits stdio (execSync gives null then).
-const sh = (cmd, opts = {}) =>
-  (execSync(cmd, { cwd: root, stdio: ["ignore", "pipe", "inherit"], encoding: "utf8", ...opts }) ?? "").trim();
 const fail = (msg) => {
   console.error(`\n✖ ${msg}\n`);
   process.exit(1);
+};
+
+// Returns captured stdout, or "" when the caller inherits stdio (execSync gives null then).
+// A failing command has already printed its stderr, so just say which one it was.
+const sh = (cmd, opts = {}) => {
+  try {
+    return (
+      execSync(cmd, { cwd: root, stdio: ["ignore", "pipe", "inherit"], encoding: "utf8", ...opts }) ?? ""
+    ).trim();
+  } catch {
+    return fail(`Command failed: ${cmd}`);
+  }
 };
 
 // --- Preconditions -----------------------------------------------------------
