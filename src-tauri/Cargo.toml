@@ -1,6 +1,6 @@
 [package]
 name = "medlib-m3"
-version = "0.1.1"
+version = "0.1.2"
 description = "MedLib M3 - store management and POS"
 authors = ["Rayane"]
 edition = "2021"
