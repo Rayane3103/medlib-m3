@@ -1,5 +1,7 @@
-# Normalise line endings in the repo; checkouts use the platform default.
-* text=auto
+# Text files are always LF, on every platform. The Rust build embeds the
+# SQL migrations and checksums their exact bytes, so a CRLF checkout would
+# produce a build that rejects databases created by an LF build.
+* text=auto eol=lf
 *.png binary
 *.ico binary
 *.icns binary

@@ -39,7 +39,36 @@ pub async fn init_pool(app: &AppHandle) -> AppResult<SqlitePool> {
         .connect_with(options)
         .await?;
 
-    sqlx::migrate!("./migrations").run(&pool).await?;
+    migrator().run(&pool).await?;
 
     Ok(pool)
+}
+
+/// The embedded migrations, with line endings normalised to LF.
+///
+/// SQLx checksums each migration's exact bytes and refuses to start if an
+/// already-applied migration's checksum differs. A build made from a CRLF
+/// checkout (Windows CI) would therefore reject a database created by an
+/// LF build, and vice versa - the app would die at startup with
+/// "migration error". Normalising before checksumming makes the checksum
+/// depend on the SQL only, never on how git checked the files out.
+fn migrator() -> sqlx::migrate::Migrator {
+    use std::borrow::Cow;
+
+    let mut migrator = sqlx::migrate!("./migrations");
+    let migrations: Vec<sqlx::migrate::Migration> = migrator
+        .migrations
+        .iter()
+        .map(|m| {
+            sqlx::migrate::Migration::new(
+                m.version,
+                m.description.clone(),
+                m.migration_type,
+                Cow::Owned(m.sql.replace("\r\n", "\n")),
+                m.no_tx,
+            )
+        })
+        .collect();
+    migrator.migrations = Cow::Owned(migrations);
+    migrator
 }
