@@ -84,6 +84,33 @@ jobs:
 
       - run: npm ci
 
+      # Build first, separately from publishing, so the result can be smoke
+      # tested. tauri-action below rebuilds, but incrementally - seconds.
+      - name: Build installer
+        env:
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+        run: npm run tauri build
+
+      # Launch the built app and require it to still be running after 15 s.
+      # Setup-time crashes (migration checksum mismatch, TLS provider
+      # ambiguity, ...) show as a white window that closes instantly - a
+      # broken release that installed apps would happily update *into*.
+      - name: Smoke test - the app must start and stay up
+        shell: pwsh
+        run: |
+          $exe = "src-tauri/target/release/medlib-m3.exe"
+          $p = Start-Process -FilePath $exe -PassThru -RedirectStandardError smoke-stderr.txt
+          Start-Sleep -Seconds 15
+          if ($p.HasExited) {
+            Write-Host "::error::App exited within 15 s (exit code $($p.ExitCode)). stderr:"
+            Get-Content smoke-stderr.txt
+            exit 1
+          }
+          Stop-Process -Id $p.Id -Force
+          Write-Host "App ran for 15 s without exiting."
+          Get-Content smoke-stderr.txt
+
       # Runs tauri.conf.json's beforeBuildCommand (phone-scanner bundle +
       # frontend build), then `tauri build`, then publishes everything.
       - uses: tauri-apps/tauri-action@v0

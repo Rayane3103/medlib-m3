@@ -7,6 +7,13 @@ use tauri::Manager;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
+    // Two rustls crypto backends end up compiled in (ring via the updater's
+    // reqwest, aws-lc-rs via axum-server), and rustls refuses to guess between
+    // them: without this line the first TLS config - the phone-scanner server,
+    // right at startup - panics. Must run before anything touches TLS. Err
+    // only means a provider is already installed, which is fine.
+    let _ = rustls::crypto::ring::default_provider().install_default();
+
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_updater::Builder::new().build())

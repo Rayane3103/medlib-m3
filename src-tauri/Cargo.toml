@@ -34,6 +34,10 @@ axum = "0.8"
 axum-server = { version = "0.7", features = ["tls-rustls"] }
 rcgen = "0.13"
 uuid = { version = "1", features = ["v4"] }
+# Only used to pick the TLS crypto backend at startup (see lib.rs). The
+# updater's HTTP client and axum-server pull in *both* rustls backends, and
+# rustls panics at first use unless exactly one is chosen explicitly.
+rustls = { version = "0.23", default-features = false, features = ["ring"] }
 
 [profile.release]
 codegen-units = 1
