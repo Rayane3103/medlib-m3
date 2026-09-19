@@ -20,9 +20,36 @@ export type UpdateCheck = { update: Update | null };
 export async function checkForUpdate(): Promise<UpdateCheck> {
   // In `tauri dev` the running version is whatever is in tauri.conf.json,
   // which usually lags the published release - a check would just nag.
-  if (import.meta.env.DEV) return { update: null };
+  if (import.meta.env.DEV) return { update: demoUpdate() };
   const update = await check({ timeout: 15_000 });
   return { update };
+}
+
+/**
+ * Dev-only stand-in so the update dialog can be worked on without shipping
+ * a release: open the app with `#/?updater-demo` (or `npm run dev` in a
+ * browser with that hash). "Install" fakes a 3 s download and stops before
+ * the relaunch. Compiled out of release builds by the DEV check above.
+ */
+function demoUpdate(): Update | null {
+  if (!window.location.hash.includes("updater-demo")) return null;
+  const fake = {
+    version: "9.9.9",
+    currentVersion: "0.1.2",
+    body: "- Nouvelle fenêtre de mise à jour\n- Corrections diverses",
+    date: undefined,
+    rawJson: {},
+    async downloadAndInstall(onEvent?: (e: { event: string; data: Record<string, number> }) => void) {
+      onEvent?.({ event: "Started", data: { contentLength: 3_000_000 } });
+      for (let i = 0; i < 30; i++) {
+        await new Promise((r) => setTimeout(r, 100));
+        onEvent?.({ event: "Progress", data: { chunkLength: 100_000 } });
+      }
+      onEvent?.({ event: "Finished", data: {} });
+    },
+    async close() {},
+  };
+  return fake as unknown as Update;
 }
 
 export type DownloadProgress = {
@@ -61,6 +88,7 @@ export async function installUpdate(
     }
   });
 
+  if (import.meta.env.DEV) return; // demo mode - nothing was really installed
   await relaunch();
 }
 

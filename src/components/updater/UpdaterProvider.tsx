@@ -9,7 +9,7 @@ import {
   type ReactNode,
 } from "react";
 import type { Update } from "@tauri-apps/plugin-updater";
-import { Download, RefreshCw } from "lucide-react";
+import { Clock, Download, RefreshCw } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -157,15 +157,20 @@ function UpdateDialog({ open, status, onInstall, onDismiss }: DialogProps) {
   return (
     <Dialog open={open} onOpenChange={(o) => !o && !locked && onDismiss()}>
       <DialogContent
-        className="max-w-md"
+        className="max-w-lg"
+        hideClose={locked}
         onEscapeKeyDown={(e) => locked && e.preventDefault()}
         onPointerDownOutside={(e) => locked && e.preventDefault()}
       >
         <DialogHeader>
-          <DialogTitle>Mise à jour disponible</DialogTitle>
+          {/* The new version number is always in the title - it is the one
+              thing the cashier needs to be able to read off at a glance. */}
+          <DialogTitle>
+            {update ? `Mise à jour disponible : version ${update.version}` : "Mise à jour"}
+          </DialogTitle>
           <DialogDescription>
             {update
-              ? `La version ${update.version} de MedLib M3 est prête à être installée (version actuelle : ${update.currentVersion}).`
+              ? `Vous utilisez la version ${update.currentVersion}. La version ${update.version} de MedLib M3 est prête à être installée.`
               : "Recherche de mises à jour…"}
           </DialogDescription>
         </DialogHeader>
@@ -187,15 +192,24 @@ function UpdateDialog({ open, status, onInstall, onDismiss }: DialogProps) {
 
         {status.kind === "error" && <p className="text-sm text-destructive">{status.message}</p>}
 
-        <DialogFooter>
+        {status.kind === "available" && (
+          <p className="text-xs text-muted-foreground">
+            L&apos;installation prend moins d&apos;une minute et redémarre l&apos;application. Si vous
+            choisissez d&apos;attendre, ce message reviendra à chaque lancement jusqu&apos;à la mise à
+            jour.
+          </p>
+        )}
+
+        <DialogFooter className="gap-2 sm:gap-0">
           {status.kind === "available" && (
             <>
               <Button variant="outline" onClick={onDismiss}>
-                Plus tard
+                <Clock />
+                Me le rappeler au prochain lancement
               </Button>
               <Button onClick={onInstall}>
                 <Download />
-                Installer et redémarrer
+                Mettre à jour et redémarrer maintenant
               </Button>
             </>
           )}
