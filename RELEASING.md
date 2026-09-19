@@ -39,10 +39,18 @@ is only used for the few seconds of the check.
    the workflow is green, the release is live at
    `https://github.com/Rayane3103/medlib-m3/releases`.
 
-4. On the shop PC, the next app launch shows the update dialog with the
-   release notes (the commit messages since the previous release - write
-   them in French with the cashier in mind). *Paramètres → Mises à jour →
-   Vérifier* forces a check without restarting.
+4. On the shop PC, the next app launch shows the update dialog: the new
+   version number in the title, the release notes (the commit messages
+   since the previous release - write them in French with the cashier in
+   mind), and two choices: **Mettre à jour et redémarrer maintenant** or
+   **Me le rappeler au prochain lancement**. Nothing is remembered about
+   the second choice - the dialog simply comes back at every launch until
+   someone picks the first. *Paramètres → Mises à jour → Vérifier* forces
+   a check without restarting.
+
+   The check always reads the *latest* release. If v2 was ignored for a
+   week and v3 is published, the app offers v3 and installs it directly;
+   it never steps through v2.
 
 That is the whole process. Pushing to `main` without bumping the version
 builds nothing - the workflow sees the version is already released and
@@ -54,7 +62,7 @@ stops - so day-to-day pushes are safe.
 |---|---|---|
 | Updater plugin | `src-tauri` (`tauri-plugin-updater`, `tauri-plugin-process`) | Fetches `latest.json`, compares versions, verifies the signature, runs the installer, restarts |
 | Endpoint + public key | `src-tauri/tauri.conf.json` → `plugins.updater` | Where to look and which signature to trust |
-| UI | `src/components/updater/UpdaterProvider.tsx`, `src/pages/Settings.tsx` | Silent check 4 s after startup; dialog only when an update exists; manual check + error details in Settings |
+| UI | `src/components/updater/UpdaterProvider.tsx`, `src/pages/Settings.tsx` | Silent check 4 s after startup; dialog only when an update exists; manual check + error details in Settings. To work on the dialog without a real release, run `npm run dev` and open `http://localhost:1420/#/settings?updater-demo` - a fake 9.9.9 update with a simulated download |
 | Workflow | `.github/workflows/release.yml` | On push to `main`: build + sign + publish when the version is new |
 | Release script | `scripts/release.mjs` (`npm run release`) | Bumps the version everywhere and pushes |
 
