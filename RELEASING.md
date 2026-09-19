@@ -108,7 +108,7 @@ it. Windows SmartScreen shows "unknown publisher" the first time because
 the installer isn't code-signed with a paid certificate - choose *More
 info → Run anyway*. Automatic updates afterwards do not show this prompt.
 
-An install made before the updater existed (< v0.2.0) has no way to update
+An install made before the updater existed (any build that was not downloaded from the releases page) has no way to update
 itself; reinstall it once by hand from the releases page.
 
 ## Rolling back
