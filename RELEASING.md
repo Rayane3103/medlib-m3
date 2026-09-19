@@ -79,7 +79,7 @@ Where it lives:
 - `C:\Users\<you>\.tauri\medlib-m3.key.password` - its password
 - `C:\Users\<you>\.tauri\medlib-m3.key.pub` - public key (also in `tauri.conf.json`)
 - GitHub → repo **Settings → Secrets and variables → Actions**:
-  `TAURI_SIGNING_PRIVATE_KEY` (contents of the `.key` file) and
+  `TAURI_SIGNING_PRIVATE_KEY` (contents of the `.key` file, one line) and
   `TAURI_SIGNING_PRIVATE_KEY_PASSWORD`
 
 Back the first two files up somewhere that is *not* this PC (password
@@ -120,9 +120,13 @@ installs from finding it; it doesn't downgrade anyone.
 
 ## Troubleshooting
 
-- **Workflow failed at the tauri-action step with a signing error** - a
-  secret is missing or mistyped. Re-paste both secrets; the key value is the
-  whole one-line content of the `.key` file.
+- **Workflow failed at the tauri-action step** (`npm run tauri build`
+  exit code 1, after the Rust compile) - almost always a secret problem.
+  `TAURI_SIGNING_PRIVATE_KEY` must be the `.key` file's content pasted as
+  **one single line** - no line breaks, no trailing newline; GitHub's
+  secret box happily accepts a wrapped paste and the signer then rejects
+  it. Re-paste both secrets and push an empty commit
+  (`git commit --allow-empty -m "Retry release" && git push`) to retry.
 - **Workflow ran but skipped the build** - the version in
   `src-tauri/tauri.conf.json` already has a release tag. Bump it.
 - **App says "Impossible de contacter le serveur"** - no Internet, or GitHub
