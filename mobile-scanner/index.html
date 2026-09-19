@@ -1,0 +1,1005 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1, user-scalable=no"
+    />
+    <meta name="theme-color" content="#0a0d12" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <title>Scanner MedLib M3</title>
+    <style>
+      :root {
+        color-scheme: dark;
+        --bg: #0a0d12;
+        --surface: #121821;
+        --surface-2: #1a2230;
+        --surface-3: #232d3d;
+        --border: rgba(255, 255, 255, 0.08);
+        --border-strong: rgba(255, 255, 255, 0.14);
+        --text: #eef3f8;
+        --muted: #8d9aab;
+        --muted-2: #5f6c7c;
+        --accent: #2ee6a6;
+        --accent-deep: #14b986;
+        --accent-soft: rgba(46, 230, 166, 0.14);
+        --danger: #ff6b6b;
+        --danger-soft: rgba(255, 107, 107, 0.14);
+        --warn: #ffc857;
+        --warn-soft: rgba(255, 200, 87, 0.14);
+        --safe-top: env(safe-area-inset-top, 0px);
+        --safe-bottom: env(safe-area-inset-bottom, 0px);
+        --ease: cubic-bezier(0.32, 0.72, 0, 1);
+      }
+      * {
+        box-sizing: border-box;
+        -webkit-tap-highlight-color: transparent;
+      }
+      html,
+      body {
+        margin: 0;
+        height: 100%;
+        background: var(--bg);
+        color: var(--text);
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Inter", sans-serif;
+        overscroll-behavior: none;
+        -webkit-font-smoothing: antialiased;
+      }
+      button {
+        font: inherit;
+        color: inherit;
+        border: 0;
+        background: none;
+        padding: 0;
+        cursor: pointer;
+        touch-action: manipulation;
+      }
+      button:disabled {
+        cursor: default;
+      }
+      .num {
+        font-variant-numeric: tabular-nums;
+      }
+      [hidden] {
+        display: none !important;
+      }
+
+      /* ---------- shell ---------- */
+      #app {
+        display: flex;
+        flex-direction: column;
+        height: 100%;
+        height: 100dvh;
+      }
+
+      /* ---------- header ---------- */
+      header {
+        padding: calc(0.75rem + var(--safe-top)) 1rem 0.75rem;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 0.75rem;
+        background: linear-gradient(to bottom, #0d1219, var(--bg));
+        border-bottom: 1px solid var(--border);
+      }
+      .brand {
+        display: flex;
+        align-items: center;
+        gap: 0.6rem;
+        min-width: 0;
+      }
+      .brand-mark {
+        width: 34px;
+        height: 34px;
+        border-radius: 10px;
+        background: linear-gradient(135deg, var(--accent), #1fa7ff);
+        display: grid;
+        place-items: center;
+        flex-shrink: 0;
+        box-shadow: 0 6px 18px -6px rgba(46, 230, 166, 0.6);
+      }
+      .brand-mark svg {
+        width: 20px;
+        height: 20px;
+        color: #06110d;
+      }
+      .brand-text {
+        line-height: 1.15;
+        min-width: 0;
+      }
+      .brand-text .title {
+        font-weight: 700;
+        font-size: 0.95rem;
+        letter-spacing: -0.01em;
+      }
+      .brand-text .sub {
+        font-size: 0.72rem;
+        color: var(--muted);
+      }
+      #status {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.4rem;
+        padding: 0.35rem 0.65rem;
+        border-radius: 999px;
+        font-size: 0.72rem;
+        font-weight: 600;
+        letter-spacing: 0.01em;
+        background: var(--surface-2);
+        border: 1px solid var(--border);
+        color: var(--muted);
+        white-space: nowrap;
+        transition: all 0.25s;
+      }
+      #status .dot {
+        width: 7px;
+        height: 7px;
+        border-radius: 50%;
+        background: currentColor;
+        position: relative;
+      }
+      #status.connected {
+        color: var(--accent);
+        background: var(--accent-soft);
+        border-color: rgba(46, 230, 166, 0.3);
+      }
+      #status.connected .dot::after {
+        content: "";
+        position: absolute;
+        inset: -4px;
+        border-radius: 50%;
+        border: 1.5px solid currentColor;
+        opacity: 0;
+        animation: ping 1.8s var(--ease) infinite;
+      }
+      #status.disconnected {
+        color: var(--warn);
+        background: var(--warn-soft);
+        border-color: rgba(255, 200, 87, 0.3);
+      }
+      #status.offline {
+        color: var(--danger);
+        background: var(--danger-soft);
+        border-color: rgba(255, 107, 107, 0.3);
+      }
+      @keyframes ping {
+        0% {
+          transform: scale(0.6);
+          opacity: 0.9;
+        }
+        100% {
+          transform: scale(1.8);
+          opacity: 0;
+        }
+      }
+
+      /* ---------- camera ---------- */
+      #video-wrap {
+        position: relative;
+        flex: 1;
+        min-height: 0;
+        background: #000;
+        overflow: hidden;
+      }
+      video {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        display: block;
+      }
+      .viewfinder {
+        position: absolute;
+        inset: 0;
+        pointer-events: none;
+        display: grid;
+        place-items: center;
+      }
+      .reticle {
+        position: relative;
+        width: min(78vw, 360px);
+        aspect-ratio: 1.6;
+        border-radius: 18px;
+        /* huge spread shadow = dim everything outside the reticle */
+        box-shadow: 0 0 0 200vmax rgba(5, 8, 12, 0.5);
+      }
+      .reticle .corner {
+        position: absolute;
+        width: 26px;
+        height: 26px;
+        border: 3px solid #fff;
+        border-radius: 4px;
+        filter: drop-shadow(0 0 6px rgba(0, 0, 0, 0.6));
+        transition: border-color 0.25s;
+      }
+      .reticle .corner.tl {
+        top: -2px;
+        left: -2px;
+        border-right: 0;
+        border-bottom: 0;
+        border-top-left-radius: 14px;
+      }
+      .reticle .corner.tr {
+        top: -2px;
+        right: -2px;
+        border-left: 0;
+        border-bottom: 0;
+        border-top-right-radius: 14px;
+      }
+      .reticle .corner.bl {
+        bottom: -2px;
+        left: -2px;
+        border-right: 0;
+        border-top: 0;
+        border-bottom-left-radius: 14px;
+      }
+      .reticle .corner.br {
+        bottom: -2px;
+        right: -2px;
+        border-left: 0;
+        border-top: 0;
+        border-bottom-right-radius: 14px;
+      }
+      .reticle .laser {
+        position: absolute;
+        left: 8%;
+        right: 8%;
+        height: 2px;
+        top: 10%;
+        border-radius: 2px;
+        background: linear-gradient(90deg, transparent, var(--accent), transparent);
+        box-shadow: 0 0 12px 2px rgba(46, 230, 166, 0.55);
+        animation: sweep 2.2s ease-in-out infinite;
+      }
+      @keyframes sweep {
+        0%,
+        100% {
+          top: 10%;
+        }
+        50% {
+          top: 88%;
+        }
+      }
+      .reticle.flash .corner {
+        border-color: var(--accent);
+      }
+      .reticle.flash-bad .corner {
+        border-color: var(--danger);
+      }
+      .hint {
+        position: absolute;
+        top: 0.9rem;
+        left: 50%;
+        transform: translateX(-50%);
+        font-size: 0.75rem;
+        color: rgba(255, 255, 255, 0.75);
+        background: rgba(0, 0, 0, 0.35);
+        backdrop-filter: blur(8px);
+        -webkit-backdrop-filter: blur(8px);
+        padding: 0.35rem 0.8rem;
+        border-radius: 999px;
+        white-space: nowrap;
+      }
+
+      /* last-scan toast, floating over the camera */
+      #toast {
+        position: absolute;
+        left: 0.9rem;
+        right: 0.9rem;
+        bottom: 0.9rem;
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        padding: 0.75rem 0.85rem;
+        border-radius: 16px;
+        background: rgba(18, 24, 33, 0.82);
+        backdrop-filter: blur(16px) saturate(140%);
+        -webkit-backdrop-filter: blur(16px) saturate(140%);
+        border: 1px solid var(--border-strong);
+        box-shadow: 0 12px 32px -12px rgba(0, 0, 0, 0.8);
+        opacity: 0;
+        transform: translateY(12px);
+        transition: opacity 0.25s, transform 0.3s var(--ease);
+      }
+      #toast.show {
+        opacity: 1;
+        transform: translateY(0);
+      }
+      #toast.pop {
+        animation: pop 0.35s var(--ease);
+      }
+      @keyframes pop {
+        0% {
+          transform: translateY(0) scale(0.96);
+        }
+        60% {
+          transform: translateY(0) scale(1.02);
+        }
+        100% {
+          transform: translateY(0) scale(1);
+        }
+      }
+      #toast .icon {
+        width: 38px;
+        height: 38px;
+        border-radius: 12px;
+        display: grid;
+        place-items: center;
+        flex-shrink: 0;
+      }
+      #toast .icon svg {
+        width: 20px;
+        height: 20px;
+      }
+      #toast.ok .icon {
+        background: var(--accent-soft);
+        color: var(--accent);
+      }
+      #toast.error .icon {
+        background: var(--danger-soft);
+        color: var(--danger);
+      }
+      #toast .body {
+        min-width: 0;
+        flex: 1;
+      }
+      #toast .name {
+        font-weight: 600;
+        font-size: 0.95rem;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+      #toast .detail {
+        font-size: 0.76rem;
+        color: var(--muted);
+        margin-top: 0.1rem;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+      #toast .qty-badge {
+        flex-shrink: 0;
+        font-size: 0.75rem;
+        font-weight: 700;
+        color: var(--accent);
+        background: var(--accent-soft);
+        padding: 0.3rem 0.55rem;
+        border-radius: 999px;
+      }
+
+      /* permission overlay */
+      #permission {
+        position: absolute;
+        inset: 0;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 1rem;
+        padding: 2rem;
+        text-align: center;
+        background: radial-gradient(120% 80% at 50% 0%, #131c27, var(--bg));
+      }
+      #permission .cam {
+        width: 72px;
+        height: 72px;
+        border-radius: 22px;
+        background: var(--surface-2);
+        border: 1px solid var(--border);
+        display: grid;
+        place-items: center;
+        color: var(--accent);
+      }
+      #permission .cam svg {
+        width: 34px;
+        height: 34px;
+      }
+      #permission h2 {
+        margin: 0;
+        font-size: 1.1rem;
+      }
+      #permission p {
+        margin: 0;
+        color: var(--muted);
+        font-size: 0.9rem;
+        max-width: 26rem;
+      }
+      #permission-error {
+        color: var(--danger) !important;
+        font-size: 0.82rem !important;
+      }
+      .btn-primary {
+        padding: 0.85rem 1.6rem;
+        border-radius: 14px;
+        background: var(--accent);
+        color: #06110d;
+        font-weight: 700;
+        font-size: 1rem;
+        box-shadow: 0 10px 24px -10px rgba(46, 230, 166, 0.7);
+        transition: transform 0.15s var(--ease), filter 0.15s;
+      }
+      .btn-primary:active {
+        transform: scale(0.97);
+        filter: brightness(0.95);
+      }
+
+      /* ---------- pinned cart bar ---------- */
+      #cartbar {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        padding: 0.75rem 1rem calc(0.75rem + var(--safe-bottom));
+        background: var(--surface);
+        border-top: 1px solid var(--border);
+        box-shadow: 0 -12px 30px -18px rgba(0, 0, 0, 0.9);
+      }
+      #cartbar .totals {
+        flex: 1;
+        min-width: 0;
+      }
+      #cartbar .caption {
+        font-size: 0.68rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        color: var(--muted);
+        display: flex;
+        align-items: center;
+        gap: 0.4rem;
+        white-space: nowrap;
+        overflow: hidden;
+      }
+      #cartbar .caption .sep {
+        opacity: 0.4;
+      }
+      #cartbar .total {
+        font-size: 1.55rem;
+        font-weight: 800;
+        letter-spacing: -0.02em;
+        line-height: 1.15;
+        margin-top: 0.1rem;
+        transition: color 0.2s;
+      }
+      #cartbar .total.bump {
+        animation: bump 0.35s var(--ease);
+      }
+      @keyframes bump {
+        0% {
+          transform: scale(1);
+        }
+        40% {
+          transform: scale(1.06);
+          color: var(--accent);
+        }
+        100% {
+          transform: scale(1);
+        }
+      }
+      #cartbar .total .unit {
+        font-size: 0.85rem;
+        font-weight: 600;
+        color: var(--muted);
+        margin-left: 0.25rem;
+        letter-spacing: 0;
+      }
+      #open-cart {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        padding: 0.8rem 1rem 0.8rem 0.9rem;
+        border-radius: 14px;
+        background: var(--surface-3);
+        border: 1px solid var(--border-strong);
+        font-weight: 700;
+        font-size: 0.9rem;
+        flex-shrink: 0;
+        transition: transform 0.15s var(--ease), background 0.2s;
+      }
+      #open-cart:active {
+        transform: scale(0.96);
+        background: var(--surface-2);
+      }
+      #open-cart svg {
+        width: 20px;
+        height: 20px;
+      }
+      #open-cart .badge {
+        min-width: 22px;
+        height: 22px;
+        padding: 0 6px;
+        border-radius: 999px;
+        background: var(--accent);
+        color: #06110d;
+        font-size: 0.75rem;
+        font-weight: 800;
+        display: grid;
+        place-items: center;
+        transition: transform 0.2s var(--ease);
+      }
+      #open-cart .badge.zero {
+        background: var(--surface-2);
+        color: var(--muted);
+      }
+      #open-cart .badge.bump {
+        animation: bump 0.35s var(--ease);
+      }
+
+      /* ---------- cart sheet ---------- */
+      #backdrop {
+        position: fixed;
+        inset: 0;
+        background: rgba(3, 5, 8, 0.6);
+        backdrop-filter: blur(3px);
+        -webkit-backdrop-filter: blur(3px);
+        opacity: 0;
+        pointer-events: none;
+        transition: opacity 0.3s;
+        z-index: 20;
+      }
+      #sheet {
+        position: fixed;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        max-height: 88dvh;
+        max-height: 88vh;
+        display: flex;
+        flex-direction: column;
+        background: var(--surface);
+        border-radius: 24px 24px 0 0;
+        border-top: 1px solid var(--border-strong);
+        box-shadow: 0 -20px 60px -20px rgba(0, 0, 0, 0.9);
+        transform: translateY(105%);
+        transition: transform 0.38s var(--ease);
+        z-index: 21;
+        will-change: transform;
+      }
+      body.sheet-open #backdrop {
+        opacity: 1;
+        pointer-events: auto;
+      }
+      body.sheet-open #sheet {
+        transform: translateY(0);
+      }
+      .sheet-handle {
+        width: 40px;
+        height: 4px;
+        border-radius: 4px;
+        background: var(--border-strong);
+        margin: 0.6rem auto 0;
+      }
+      .sheet-head {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 0.75rem 1rem 0.65rem;
+      }
+      .sheet-head .t {
+        font-weight: 800;
+        font-size: 1.1rem;
+        letter-spacing: -0.01em;
+      }
+      .sheet-head .s {
+        font-size: 0.78rem;
+        color: var(--muted);
+        margin-top: 0.1rem;
+      }
+      #close-sheet {
+        width: 36px;
+        height: 36px;
+        border-radius: 12px;
+        background: var(--surface-2);
+        border: 1px solid var(--border);
+        display: grid;
+        place-items: center;
+        color: var(--muted);
+      }
+      #close-sheet svg {
+        width: 18px;
+        height: 18px;
+      }
+      #sheet-notice {
+        margin: 0 1rem 0.5rem;
+        padding: 0.6rem 0.8rem;
+        border-radius: 12px;
+        font-size: 0.78rem;
+        font-weight: 600;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        background: var(--warn-soft);
+        color: var(--warn);
+        border: 1px solid rgba(255, 200, 87, 0.25);
+      }
+      #sheet-notice svg {
+        width: 16px;
+        height: 16px;
+        flex-shrink: 0;
+      }
+      #lines {
+        flex: 1;
+        min-height: 0;
+        overflow-y: auto;
+        padding: 0 0.75rem;
+        -webkit-overflow-scrolling: touch;
+        overscroll-behavior: contain;
+      }
+      .line {
+        display: grid;
+        grid-template-columns: 1fr auto;
+        grid-template-areas:
+          "info stepper"
+          "meta stepper";
+        column-gap: 0.75rem;
+        row-gap: 0.25rem;
+        align-items: center;
+        padding: 0.8rem 0.35rem;
+        border-bottom: 1px solid var(--border);
+        animation: rowin 0.3s var(--ease);
+      }
+      .line:last-child {
+        border-bottom: 0;
+      }
+      @keyframes rowin {
+        from {
+          opacity: 0;
+          transform: translateY(6px);
+        }
+      }
+      .line.leaving {
+        opacity: 0;
+        transform: translateX(-16px);
+        transition: opacity 0.2s, transform 0.2s;
+      }
+      .line .info {
+        grid-area: info;
+        min-width: 0;
+      }
+      .line .name {
+        font-weight: 600;
+        font-size: 0.95rem;
+        line-height: 1.25;
+        display: -webkit-box;
+        -webkit-line-clamp: 2;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+      }
+      .line .meta {
+        grid-area: meta;
+        display: flex;
+        align-items: baseline;
+        gap: 0.5rem;
+        font-size: 0.78rem;
+        color: var(--muted);
+        flex-wrap: wrap;
+      }
+      .line .meta .line-total {
+        color: var(--text);
+        font-weight: 700;
+        font-size: 0.85rem;
+      }
+      .line .meta .warn {
+        color: var(--warn);
+        font-weight: 600;
+      }
+      .stepper {
+        grid-area: stepper;
+        display: flex;
+        align-items: center;
+        gap: 0.15rem;
+        background: var(--surface-2);
+        border: 1px solid var(--border);
+        border-radius: 14px;
+        padding: 0.2rem;
+      }
+      .stepper button {
+        width: 40px;
+        height: 40px;
+        border-radius: 11px;
+        display: grid;
+        place-items: center;
+        color: var(--text);
+        transition: background 0.15s, transform 0.1s var(--ease), color 0.15s;
+      }
+      .stepper button:active {
+        background: var(--surface-3);
+        transform: scale(0.92);
+      }
+      .stepper button:disabled {
+        opacity: 0.35;
+      }
+      .stepper button svg {
+        width: 18px;
+        height: 18px;
+      }
+      .stepper .minus.remove {
+        color: var(--danger);
+      }
+      .stepper .qty {
+        min-width: 44px;
+        height: 40px;
+        display: grid;
+        place-items: center;
+        font-weight: 800;
+        font-size: 1.05rem;
+        border-radius: 10px;
+      }
+      .stepper .qty:active {
+        background: var(--surface-3);
+      }
+      .stepper .qty.syncing {
+        color: var(--accent);
+      }
+      .stepper input {
+        width: 56px;
+        height: 40px;
+        text-align: center;
+        font: inherit;
+        font-weight: 800;
+        font-size: 1.05rem;
+        color: var(--text);
+        background: var(--bg);
+        border: 1.5px solid var(--accent);
+        border-radius: 10px;
+        outline: none;
+        -moz-appearance: textfield;
+      }
+      .stepper input::-webkit-outer-spin-button,
+      .stepper input::-webkit-inner-spin-button {
+        -webkit-appearance: none;
+      }
+      #empty {
+        padding: 3rem 1rem;
+        text-align: center;
+        color: var(--muted);
+      }
+      #empty .ill {
+        width: 64px;
+        height: 64px;
+        margin: 0 auto 0.9rem;
+        border-radius: 20px;
+        background: var(--surface-2);
+        border: 1px solid var(--border);
+        display: grid;
+        place-items: center;
+        color: var(--muted-2);
+      }
+      #empty .ill svg {
+        width: 30px;
+        height: 30px;
+      }
+      #empty .t {
+        font-weight: 700;
+        color: var(--text);
+        margin-bottom: 0.25rem;
+      }
+      #empty .s {
+        font-size: 0.82rem;
+      }
+      .sheet-foot {
+        border-top: 1px solid var(--border);
+        padding: 0.85rem 1rem calc(0.85rem + var(--safe-bottom));
+        background: var(--surface);
+        border-radius: 0 0 0 0;
+      }
+      .sheet-foot .row {
+        display: flex;
+        align-items: baseline;
+        justify-content: space-between;
+      }
+      .sheet-foot .row + .row {
+        margin-top: 0.25rem;
+      }
+      .sheet-foot .k {
+        color: var(--muted);
+        font-size: 0.82rem;
+      }
+      .sheet-foot .v {
+        font-weight: 600;
+        font-size: 0.85rem;
+      }
+      .sheet-foot .grand .k {
+        color: var(--text);
+        font-weight: 700;
+        font-size: 1rem;
+      }
+      .sheet-foot .grand .v {
+        font-size: 1.5rem;
+        font-weight: 800;
+        letter-spacing: -0.02em;
+      }
+      .sheet-foot .sync {
+        display: flex;
+        align-items: center;
+        gap: 0.4rem;
+        margin-top: 0.6rem;
+        font-size: 0.72rem;
+        color: var(--muted-2);
+      }
+      .sheet-foot .sync .dot {
+        width: 6px;
+        height: 6px;
+        border-radius: 50%;
+        background: var(--accent);
+        box-shadow: 0 0 8px var(--accent);
+      }
+      .sheet-foot .sync.off .dot {
+        background: var(--warn);
+        box-shadow: 0 0 8px var(--warn);
+      }
+
+      /* screen-wide session error (no token) */
+      #fatal {
+        position: fixed;
+        inset: 0;
+        z-index: 50;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 0.75rem;
+        padding: 2rem;
+        text-align: center;
+        background: var(--bg);
+      }
+      #fatal .ill {
+        width: 64px;
+        height: 64px;
+        border-radius: 20px;
+        background: var(--danger-soft);
+        color: var(--danger);
+        display: grid;
+        place-items: center;
+      }
+      #fatal .ill svg {
+        width: 30px;
+        height: 30px;
+      }
+      #fatal h2 {
+        margin: 0;
+      }
+      #fatal p {
+        margin: 0;
+        color: var(--muted);
+        max-width: 24rem;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="app">
+      <header>
+        <div class="brand">
+          <div class="brand-mark" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M3 7V5a2 2 0 0 1 2-2h2M17 3h2a2 2 0 0 1 2 2v2M21 17v2a2 2 0 0 1-2 2h-2M7 21H5a2 2 0 0 1-2-2v-2" />
+              <path d="M7 8v8M11 8v8M15 8v8M18 8v8" stroke-width="2" />
+            </svg>
+          </div>
+          <div class="brand-text">
+            <div class="title">Scanner téléphone</div>
+            <div class="sub">MedLib M3</div>
+          </div>
+        </div>
+        <div id="status"><span class="dot"></span><span class="label">Connexion…</span></div>
+      </header>
+
+      <div id="video-wrap">
+        <video id="video" playsinline muted autoplay></video>
+
+        <div class="viewfinder" aria-hidden="true">
+          <div class="hint">Alignez le code-barres dans le cadre</div>
+          <div class="reticle" id="reticle">
+            <div class="corner tl"></div>
+            <div class="corner tr"></div>
+            <div class="corner bl"></div>
+            <div class="corner br"></div>
+            <div class="laser"></div>
+          </div>
+        </div>
+
+        <div id="toast" role="status" aria-live="polite">
+          <div class="icon"></div>
+          <div class="body">
+            <div class="name"></div>
+            <div class="detail"></div>
+          </div>
+          <div class="qty-badge" hidden></div>
+        </div>
+
+        <div id="permission">
+          <div class="cam">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z" />
+              <circle cx="12" cy="13" r="3" />
+            </svg>
+          </div>
+          <h2>Accès à la caméra requis</h2>
+          <p>Pointez votre téléphone vers le code-barres d'un produit : il est ajouté instantanément au panier de l'ordinateur.</p>
+          <button id="grant" class="btn-primary">Activer la caméra</button>
+          <p id="permission-error" hidden></p>
+        </div>
+      </div>
+
+      <div id="cartbar">
+        <div class="totals">
+          <div class="caption">
+            <span id="bar-label">Panier</span>
+            <span class="sep">·</span>
+            <span id="bar-count">0 article</span>
+          </div>
+          <div class="total num" id="bar-total">0<span class="unit">DA</span></div>
+        </div>
+        <button id="open-cart" aria-label="Ouvrir le panier">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="9" cy="21" r="1" />
+            <circle cx="20" cy="21" r="1" />
+            <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6" />
+          </svg>
+          <span>Panier</span>
+          <span class="badge zero" id="bar-badge">0</span>
+        </button>
+      </div>
+    </div>
+
+    <div id="backdrop"></div>
+    <div id="sheet" role="dialog" aria-modal="true" aria-labelledby="sheet-title">
+      <div class="sheet-handle"></div>
+      <div class="sheet-head">
+        <div>
+          <div class="t" id="sheet-title">Panier</div>
+          <div class="s" id="sheet-sub">0 article · synchronisé avec l'ordinateur</div>
+        </div>
+        <button id="close-sheet" aria-label="Fermer">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round">
+            <path d="M18 6 6 18M6 6l12 12" />
+          </svg>
+        </button>
+      </div>
+      <div id="sheet-notice" hidden>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
+          <path d="M12 9v4M12 17h.01" />
+        </svg>
+        <span id="sheet-notice-text"></span>
+      </div>
+      <div id="lines"></div>
+      <div id="empty">
+        <div class="ill">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="9" cy="21" r="1" />
+            <circle cx="20" cy="21" r="1" />
+            <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6" />
+          </svg>
+        </div>
+        <div class="t">Le panier est vide</div>
+        <div class="s">Scannez un code-barres pour ajouter le premier produit.</div>
+      </div>
+      <div class="sheet-foot">
+        <div class="row">
+          <span class="k">Articles</span>
+          <span class="v num" id="foot-count">0</span>
+        </div>
+        <div class="row grand">
+          <span class="k">Total</span>
+          <span class="v num" id="foot-total">0 DA</span>
+        </div>
+        <div class="sync" id="sync-hint"><span class="dot"></span><span>En direct · les modifications ici mettent à jour l'ordinateur instantanément</span></div>
+      </div>
+    </div>
+
+    <div id="fatal" hidden>
+      <div class="ill">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="3" y="11" width="18" height="11" rx="2" />
+          <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+        </svg>
+      </div>
+      <h2 id="fatal-title">Session manquante</h2>
+      <p id="fatal-text">Ouvrez cette page en scannant le code QR affiché dans l'application de bureau.</p>
+    </div>
+
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>

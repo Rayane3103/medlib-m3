@@ -1,0 +1,100 @@
+# Build the Windows installer and publish a GitHub Release whenever the
+# version in src-tauri/tauri.conf.json changes on main.
+#
+# Every push to main runs the cheap "check" job. It compares the version in
+# the repo with the existing release tags: if a release for that version
+# already exists, nothing else happens - so ordinary pushes never ship. When
+# the version is new (see `npm run release`), the "build" job produces the
+# NSIS installer, signs it with the updater key and publishes it together
+# with latest.json, which installed apps poll on startup. See RELEASING.md.
+name: Release
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+# Never build two releases at once; a second push queues behind the first.
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+jobs:
+  check:
+    name: Is this a new version?
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+      release: ${{ steps.version.outputs.release }}
+      notes: ${{ steps.notes.outputs.body }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # full history + tags, for the "since last release" notes
+
+      - name: Read version and look for an existing release
+        id: version
+        run: |
+          VERSION=$(jq -r .version src-tauri/tauri.conf.json)
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          if git ls-remote --exit-code --tags origin "refs/tags/v$VERSION" > /dev/null; then
+            echo "v$VERSION is already released - nothing to do."
+            echo "release=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "v$VERSION is new - building a release."
+            echo "release=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Write release notes from commits since the previous release
+        id: notes
+        if: steps.version.outputs.release == 'true'
+        run: |
+          PREV=$(git describe --tags --abbrev=0 --match 'v*' 2>/dev/null || true)
+          RANGE=${PREV:+$PREV..HEAD}
+          # Drop the version-bump commit itself and merge commits; they say nothing to the cashier.
+          NOTES=$(git log $RANGE --no-merges --pretty=format:'- %s' \
+                  | grep -v -E '^- Release v[0-9]' || true)
+          if [ -z "$NOTES" ]; then NOTES="- Corrections et améliorations diverses."; fi
+          {
+            echo "body<<EOF"
+            echo "$NOTES"
+            echo "EOF"
+          } >> "$GITHUB_OUTPUT"
+
+  build:
+    name: Build and publish v${{ needs.check.outputs.version }}
+    needs: check
+    if: needs.check.outputs.release == 'true'
+    runs-on: windows-latest
+    permissions:
+      contents: write # create the release and upload its assets
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - uses: swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri
+
+      - run: npm ci
+
+      # Runs tauri.conf.json's beforeBuildCommand (phone-scanner bundle +
+      # frontend build), then `tauri build`, then publishes everything.
+      - uses: tauri-apps/tauri-action@v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+        with:
+          tagName: v__VERSION__
+          releaseName: MedLib M3 v__VERSION__
+          releaseBody: ${{ needs.check.outputs.notes }}
+          releaseDraft: false
+          prerelease: false
+          updaterJsonPreferNsis: true

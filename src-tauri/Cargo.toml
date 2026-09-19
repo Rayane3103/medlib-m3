@@ -1,0 +1,43 @@
+[package]
+name = "medlib-m3"
+version = "0.1.0"
+description = "MedLib M3 - store management and POS"
+authors = ["Rayane"]
+edition = "2021"
+
+[lib]
+name = "medlib_m3_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+tauri = { version = "2", features = [] }
+tauri-plugin-opener = "2"
+# Self-update from GitHub Releases (see RELEASING.md) and app restart after install.
+tauri-plugin-updater = "2"
+tauri-plugin-process = "2"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+tokio = { version = "1", features = ["rt-multi-thread", "macros", "sync", "time"] }
+sqlx = { version = "0.8", default-features = false, features = [
+  "runtime-tokio",
+  "sqlite",
+  "migrate",
+  "macros",
+] }
+thiserror = "2"
+# Embedded local server so a phone can reach this app over the LAN to scan
+# barcodes with its camera (see commands/scan_server.rs).
+axum = "0.8"
+axum-server = { version = "0.7", features = ["tls-rustls"] }
+rcgen = "0.13"
+uuid = { version = "1", features = ["v4"] }
+
+[profile.release]
+codegen-units = 1
+lto = true
+opt-level = "s"
+panic = "abort"
+strip = true
