@@ -91,7 +91,8 @@ never be committed.
 `tauri build` needs the key too now that `createUpdaterArtifacts` is on:
 
 ``` powershell
-$env:TAURI_SIGNING_PRIVATE_KEY_PATH = "$env:USERPROFILE\.tauri\medlib-m3.key"
+# The *content* of the key, not its path - the bundler ignores TAURI_SIGNING_PRIVATE_KEY_PATH.
+$env:TAURI_SIGNING_PRIVATE_KEY = Get-Content "$env:USERPROFILE\.tauri\medlib-m3.key" -Raw
 $env:TAURI_SIGNING_PRIVATE_KEY_PASSWORD = Get-Content "$env:USERPROFILE\.tauri\medlib-m3.key.password" -Raw
 npm run tauri build
 ```
