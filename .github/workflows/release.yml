@@ -62,7 +62,7 @@ jobs:
           } >> "$GITHUB_OUTPUT"
 
   build:
-    name: Build and publish v${{ needs.check.outputs.version }}
+    name: Build and publish
     needs: check
     if: needs.check.outputs.release == 'true'
     runs-on: windows-latest
